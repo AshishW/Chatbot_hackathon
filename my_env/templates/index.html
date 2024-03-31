@@ -1,0 +1,78 @@
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chatbot</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="container">
+    <div class="chat-box">
+      <div class="initial-greet-container">
+        <img src="{{ url_for('static', filename='bot.png') }}" class="profile-photo">
+        <p class="bot-message">
+          Hello and welcome! My name is Pebble, your dedicated AI assistant. I'm here to guide you through the intricacies of NGDR data. What can I assist you with today?                                                                                              
+        </p>
+      </div>
+      <div class="user-message-container">
+        <form class="user-message-input-form" method="POST" action="/get_response">
+          <input class="query-input-txtbox" type="text" name="query" placeholder="Type your message here..." required>
+          <button class="query-submit-button" type="submit">Send</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const chatBox = document.querySelector('.chat-box');
+    const userMessageContainer = document.querySelector('.user-message-container');
+
+    function appendMessage(message, isUser) {
+      const messageElement = document.createElement('p');
+      const profilePhoto = document.createElement('img');
+      profilePhoto.classList.add('profile-photo');
+      if(isUser){
+        profilePhoto.src = "{{ url_for('static', filename='user.png') }}";
+        messageElement.classList.add('user-message');
+      }
+      else{
+        profilePhoto.src = "{{ url_for('static', filename='bot.png') }}";
+        messageElement.classList.add('bot-message');
+      }
+  
+      messageElement.classList.add(isUser ? 'user-message' : 'bot-message');
+      messageElement.innerText = message;
+      const messageContainer = document.createElement('div');
+      messageContainer.classList.add('message-container');
+      messageContainer.appendChild(profilePhoto);
+      messageContainer.appendChild(messageElement);
+      
+      chatBox.insertBefore(messageContainer, userMessageContainer);
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    const form = document.querySelector('form');
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const userQuery = document.querySelector('input[name="query"]').value;
+      appendMessage(userQuery, true);
+
+      fetch('/get_response', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ query: userQuery })
+    })
+      .then(response => response.json())
+      .then(data => {
+        appendMessage(data.response, false);
+        document.querySelector('input[name="query"]').value = '';
+      })
+      .catch((error) => {
+        console.error('Error:', error);
+      });
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,108 @@
+body {
+  font-family: sans-serif;
+  margin: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  font-size: large;
+}
+
+.container {
+  background-color: #f0f4f9;
+  padding: 20px;
+  border-radius: 5px;
+  max-width: 60vw;
+  width: 100%;
+  height: 80vh;
+}
+
+.chat-box {
+  background-color: #fff;
+  padding: 20px;
+  border-radius: 5px;
+  overflow-y: scroll;
+  height: 600px;
+  position: relative;
+}
+
+.user-message {
+  background-color: #d3e3fd;
+  padding: 10px;
+  border-radius: 5px;
+  margin-bottom: 10px;
+  display: inline-block;
+}
+
+.bot-message {
+  background-color: #f0f4f9;
+  padding: 10px;
+  animation-name: fade-in;
+  animation-duration: 0.8s;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.query-submit-button {
+  background-color: #cacfd5;
+  color: #050505;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  margin-left: 10px;
+  font-weight: bold;
+}
+
+.query-submit-button:hover {
+  background-color: #d3e3fd;
+}
+
+.query-input-txtbox {
+  background-color: #fff;
+  padding: 10px 20px;
+  border-radius: 8px;
+  border: 1px solid #dfe6ed;
+  width: 100%;
+  font-size: large;
+}
+
+.query-input-txtbox:focus-visible{
+  outline: none;
+}
+.user-message-container {
+  position: fixed;
+  bottom: 100px; 
+  width: 55vw;
+}
+
+.user-message-input-form{
+  display: flex;
+  width: 100%;
+}
+
+.profile-photo {
+  width: 40px; /* Adjust size as needed */
+  height: 40px; /* Adjust size as needed */
+  border-radius: 50%; /* Circular profile photo */
+  margin-right: 10px; /* Space between photo and message */
+}
+
+.message-container {
+  display: flex;
+  align-items: center;
+}
+
+.initial-greet-container {
+  display: flex;
+  justify-content: center;
+align-items: center;
+}
