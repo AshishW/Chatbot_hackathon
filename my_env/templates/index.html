@@ -6,13 +6,21 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
   <div class="container">
     <div class="chat-box">
       <div class="initial-greet-container">
         <img src="{{ url_for('static', filename='bot.png') }}" class="profile-photo">
+        <div class="sub_greet_container">
         <p class="bot-message">
-          Hello and welcome! My name is Pebble, your dedicated AI assistant. I'm here to guide you through the intricacies of NGDR data. What can I assist you with today?                                                                                              
+          Hello and welcome! My name is Pebble, your dedicated AI assistant. I'm here to guide you through the intricacies of NGDR data & laws and regulations from the ministry of mines. What can I assist you with today?                                                                                              
         </p>
+
+        <div class="topic-selection">
+          <button class="topic-button" data-topic="mines_and_minerals_act">Mines and Minerals Act 1957</button>
+          <button class="topic-button" data-topic="ngdr_geochemistry">NGDR Geochemistry Repository</button>
+        </div>
+      </div>
       </div>
       <div class="user-message-container">
         <form class="user-message-input-form" method="POST" action="/get_response">
@@ -22,12 +30,23 @@
       </div>
     </div>
   </div>
-
   <script>
     const chatBox = document.querySelector('.chat-box');
     const userMessageContainer = document.querySelector('.user-message-container');
+    let chatbotMode = "NGDR" //option "NGDR"/"RAG"
+    const chatInput = document.querySelector('.query-input-txtbox');
+    let enable_input = false
+    let currentTopic = null;
+    let plotId = 0;
 
-    function appendMessage(message, isUser) {
+    if (!enable_input){
+      chatInput.disabled = true
+      chatInput.placeholder = "Select a topic to continue conversation..."
+      //set chatinput background as grey
+      chatInput.style.backgroundColor = "#f2f2f2"
+    }
+    // add logic such that the input is activated only when the button is clicked
+    function appendMessage(message, isUser, isMap = false) {
       const messageElement = document.createElement('p');
       const profilePhoto = document.createElement('img');
       profilePhoto.classList.add('profile-photo');
@@ -41,7 +60,12 @@
       }
   
       messageElement.classList.add(isUser ? 'user-message' : 'bot-message');
-      messageElement.innerText = message;
+      if (isMap){
+        messageElement.id = `map-container-${plotId}`;
+      }
+      else{
+        messageElement.innerText = message;
+      }
       const messageContainer = document.createElement('div');
       messageContainer.classList.add('message-container');
       messageContainer.appendChild(profilePhoto);
@@ -56,23 +80,148 @@
       event.preventDefault();
       const userQuery = document.querySelector('input[name="query"]').value;
       appendMessage(userQuery, true);
-
-      fetch('/get_response', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ query: userQuery })
-    })
-      .then(response => response.json())
-      .then(data => {
-        appendMessage(data.response, false);
-        document.querySelector('input[name="query"]').value = '';
-      })
-      .catch((error) => {
-        console.error('Error:', error);
-      });
+      // add if else statement to make request to specific end point, ngdr or rag
+      if(chatbotMode === "NGDR"){
+        const loadingMessage = document.createElement('p');
+        loadingMessage.innerText = 'Loading...';
+        loadingMessage.classList.add('bot-message')
+        chatBox.appendChild(loadingMessage);
+        fetch('/get_response_ngdr', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ query: userQuery})
+        })
+        .then(response => response.json())
+        .then(data => { 
+          chatBox.removeChild(loadingMessage);
+          if (data.data && data.layout){ // check if the response is a map
+            getMap(data)
+          }
+          else{ // if the response is not a map
+            if (data.type() == String){ 
+              message = data 
+              appendMessage(message, false);
+            }
+            appendMessage("something went wrong... please try again", false);
+          }
+          document.querySelector('input[name="query"]').value = '';
+        })
+        // getMap(currentTopic, userQuery)
+        // document.querySelector('input[name="query"]').value = '';
+      }
+      else{ //if chatbotMode is RAG
+        fetch('/get_response_rag', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ query: userQuery,  topic: currentTopic })
+        })
+        .then(response => response.json())
+        .then(data => {
+          appendMessage(data.response, false);
+          document.querySelector('input[name="query"]').value = '';
+        })
+        .catch((error) => {
+          console.error('Error:', error);
+        });
+      }
+      //BELOW CODE IS FOR THE OLD VERSION OF THE CHATBOT
+    //   fetch('/get_response', {
+    //   method: 'POST',
+    //   headers: {
+    //     'Content-Type': 'application/json',
+    //   },
+    //   body: JSON.stringify({ query: userQuery })
+    // })
+    //   .then(response => response.json())
+    //   .then(data => {
+    //     appendMessage(data.response, false);
+    //     document.querySelector('input[name="query"]').value = '';
+    //   })
+    //   .catch((error) => {
+    //     console.error('Error:', error);
+    //   });
     });
+function getMap(map_data){
+  const mapContainer = document.createElement('div');
+  mapContainer.innerHTML = map_data.map_html;
+  mapContainer.classList.add('dynamic-map-container');
+  mapContainer.id = `map-container-${plotId}`;
+  mapContainer.classList.add('bot-message');
+  appendMessage(mapContainer, false, isMap=true)
+  Plotly.newPlot(`map-container-${plotId}`, map_data.data, map_data.layout);
+  chatBox.scrollTop = chatBox.scrollHeight;
+  plotId += 1;
+}
+
+function getMap1(topic, query) {
+    // Add a loading indicator
+    const loadingMessage = document.createElement('p');
+    loadingMessage.innerText = 'Loading...';
+    loadingMessage.classList.add('bot-message')
+    chatBox.appendChild(loadingMessage);
+    fetch('/' + 'ngdr_map', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(query)
+    })
+    .then(response => response.json())
+    .then(data => {
+        // Remove the loading indicator
+        chatBox.removeChild(loadingMessage);
+
+        // Plotly.newPlot('map-container', mapData); // Remove this line
+        const mapContainer = document.createElement('div');
+        // mapContainer.innerHTML = data.map_html;
+        mapContainer.id = `map-container-${plotId}`;
+        console.log("mapContainerid", mapContainer.id)
+        mapContainer.classList.add('bot-message')
+        // chatBox.insertBefore(mapContainer, userMessageContainer);
+        // Use data.data and data.layout for map creation
+        appendMessage(mapContainer, false, isMap=true)
+        Plotly.newPlot(`map-container-${plotId}`, data.data, data.layout);
+        chatBox.scrollTop = chatBox.scrollHeight;
+        plotId += 1;
+    })
+    .catch((error) => {
+        console.log(error)
+    });
+}
+
+
+// Add event listeners to topic buttons
+const topicButtons = document.querySelectorAll('.topic-button');
+topicButtons.forEach(button => {
+  button.addEventListener('click', () => {
+    for (let i = 0; i < topicButtons.length; i++) {
+      if (topicButtons[i] !== button) {
+        topicButtons[i].classList.remove('selected-btn');
+      }
+    }
+    console.log(button.dataset.topic)
+    button.classList.add('selected-btn')
+    enable_input = true //sets the user input to be enabled
+    if (enable_input){
+      chatInput.disabled = false
+      chatInput.placeholder = "Type your message here..."
+      chatInput.style.backgroundColor = "#ffffff"
+    }
+    currentTopic = button.dataset.topic;
+    if (currentTopic === 'ngdr_geochemistry') {
+      chatbotMode = "NGDR"
+    }
+    else {
+      chatbotMode = "RAG"
+    }
+    // getMap(topic, "create a krigging map for cu in toposheet number 5K12");
+  });
+});
+
   </script>
 </body>
 </html>

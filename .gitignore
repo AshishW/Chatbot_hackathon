@@ -1,0 +1,7 @@
+.env 
+flaskapp/my_env/__pycache__/
+flaskapp/my_env/etc/
+flaskapp/my_env/Include/
+flaskapp/my_env/Lib/
+flaskapp/my_env/Scripts/
+flaskapp/my_env/share/

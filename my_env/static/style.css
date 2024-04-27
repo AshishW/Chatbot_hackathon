@@ -78,6 +78,7 @@ body {
 .query-input-txtbox:focus-visible{
   outline: none;
 }
+
 .user-message-container {
   position: fixed;
   bottom: 100px; 
@@ -104,5 +105,71 @@ body {
 .initial-greet-container {
   display: flex;
   justify-content: center;
-align-items: center;
+  align-items: center;
+}
+
+/* Media Queries for Mobile Devices */
+@media only screen and (max-width: 600px) {
+  .container {
+    max-width: 90vw;
+  }
+
+  .chat-box {
+    height: 400px;
+  }
+
+  .user-message-container {
+    bottom: 50px;
+    width: 90vw;
+  }
+}
+
+.sub_greet_container{
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 2rem;
+}
+.topic-selection {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.topic-button {
+  background-color: #cacfd5;
+  color: #050505;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  margin: 0 10px;
+  font-weight: bold;
+}
+
+.topic-button:hover {
+  background-color: #d3e3fd;
+}
+
+.dynamic-map-container {
+  width: 600px;  /* Adjust width as needed */
+  height: 400px;  /* Adjust height as needed */
+  margin-top: 3rem;
+  display: flex;
+  justify-content: center;
+}
+
+/* Media Queries for Mobile Devices */
+@media only screen and (max-width: 600px) {
+  .dynamic-map-container {
+    width: 90vw;
+    height: 300px;
+  }
+}
+
+.selected-btn{
+  background-color: #ddcfff;
+}
+.selected-btn:hover{
+  background-color: #ddcfff;
 }
