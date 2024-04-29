@@ -173,3 +173,27 @@ body {
 .selected-btn:hover{
   background-color: #ddcfff;
 }
+
+
+.loading-message {
+  background-color: #f0f4f9;
+  animation-name: gradient-animation-in;
+  animation-duration: 3s;
+  animation-iteration-count: infinite;
+  transition: background-color 0.3s ease;
+}
+
+@keyframes gradient-animation-in {
+  0% {
+    opacity: 1;
+    background-color: #d3e3fd; /* Initial color */
+  }
+  50% {
+    opacity: 1;
+    background: linear-gradient(to right, #f0f4f9, #d3e3fd); /* Gradient colors */
+  }
+  100% {
+    opacity: 1;
+    background-color: #d3e3fd; /* Final color */
+  }
+}

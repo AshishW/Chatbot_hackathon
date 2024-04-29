@@ -17,7 +17,9 @@
         </p>
 
         <div class="topic-selection">
-          <button class="topic-button" data-topic="mines_and_minerals_act">Mines and Minerals Act 1957</button>
+          <button class="topic-button" data-topic="mines_and_minerals_act">Mines and Minerals(MMDR) Act 1957</button>
+          <button class="topic-button" data-topic="Mineral_auction_rules_2015">Mineral auction rules 2015</button>
+          <button class="topic-button" data-topic="Mines_and_minerals_evidence">Minerals (Evidence of Mineral Contents) Rules 2015</button>
           <button class="topic-button" data-topic="ngdr_geochemistry">NGDR Geochemistry Repository</button>
         </div>
       </div>
@@ -39,6 +41,10 @@
     let currentTopic = null;
     let plotId = 0;
 
+    const MMDR_question_list = ["What is the Mines and Minerals Act 1957?", "What are the key provisions of the Mines and Minerals Act 1957?", "tell me about section 25 of the mines and mineral acts", "What are the key amendments to the Mines and Minerals Act 1957?", "What are the different types of mineral concessions mentioned in the Act?"]
+    const Auction_rules_question_list = ["What are the Mineral Auction Rules 2015?", "What are the key provisions of the Mineral Auction Rules 2015?", "What are the payment terms for a successful bidder in a mining lease auction?", "Explain the process of granting a Composite Licence."]
+    const Evidence_rules_question_list = ["What are the Minerals (Evidence of Mineral Contents) Rules 2015?",  "To which minerals do these rules apply?", "What are the different stages of mineral exploration defined in the rules?", "Explain reporting Mineral Resources.",]
+    const NGDR_question_list = ["Create a kriging map for copper for the toposheet number 55K14"]
     if (!enable_input){
       chatInput.disabled = true
       chatInput.placeholder = "Select a topic to continue conversation..."
@@ -74,18 +80,30 @@
       chatBox.insertBefore(messageContainer, userMessageContainer);
       chatBox.scrollTop = chatBox.scrollHeight;
     }
+    
+    function showLoader(message){
+      const loadingMessage = document.createElement('p');
+      loadingMessage.innerText = message;
+      loadingMessage.classList.add('bot-message')
+      chatBox.appendChild(loadingMessage);
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
 
     const form = document.querySelector('form');
     form.addEventListener('submit', (event) => {
       event.preventDefault();
       const userQuery = document.querySelector('input[name="query"]').value;
       appendMessage(userQuery, true);
+      document.querySelector('input[name="query"]').value = '';
       // add if else statement to make request to specific end point, ngdr or rag
       if(chatbotMode === "NGDR"){
         const loadingMessage = document.createElement('p');
         loadingMessage.innerText = 'Loading...';
         loadingMessage.classList.add('bot-message')
+        loadingMessage.classList.add('loading-message')
         chatBox.appendChild(loadingMessage);
+        chatBox.scrollTop = chatBox.scrollHeight;
         fetch('/get_response_ngdr', {
           method: 'POST',
           headers: {
@@ -106,12 +124,18 @@
             }
             appendMessage("something went wrong... please try again", false);
           }
-          document.querySelector('input[name="query"]').value = '';
+          // document.querySelector('input[name="query"]').value = '';
         })
         // getMap(currentTopic, userQuery)
         // document.querySelector('input[name="query"]').value = '';
       }
       else{ //if chatbotMode is RAG
+        const loadingMessage = document.createElement('p');
+        loadingMessage.innerText = 'Pebble is Typing...';
+        loadingMessage.classList.add('bot-message')
+        loadingMessage.classList.add('loading-message')
+        chatBox.appendChild(loadingMessage);
+        chatBox.scrollTop = chatBox.scrollHeight;
         fetch('/get_response_rag', {
           method: 'POST',
           headers: {
@@ -121,29 +145,19 @@
         })
         .then(response => response.json())
         .then(data => {
-          appendMessage(data.response, false);
+          chatBox.removeChild(loadingMessage);
+          if (data.response === 'There was an error connecting to the chatbot. Please try again later.'){
+            appendMessage(data.response + "\n *Note: This chatbot UI is for demo purpose, perhaps the server isn't runnning. Please try again later or contact the maintainer of the code repository.", false)
+          }
+          else{ 
+            appendMessage(data.response, false);
+          }
           document.querySelector('input[name="query"]').value = '';
         })
         .catch((error) => {
           console.error('Error:', error);
         });
       }
-      //BELOW CODE IS FOR THE OLD VERSION OF THE CHATBOT
-    //   fetch('/get_response', {
-    //   method: 'POST',
-    //   headers: {
-    //     'Content-Type': 'application/json',
-    //   },
-    //   body: JSON.stringify({ query: userQuery })
-    // })
-    //   .then(response => response.json())
-    //   .then(data => {
-    //     appendMessage(data.response, false);
-    //     document.querySelector('input[name="query"]').value = '';
-    //   })
-    //   .catch((error) => {
-    //     console.error('Error:', error);
-    //   });
     });
 function getMap(map_data){
   const mapContainer = document.createElement('div');
@@ -157,40 +171,34 @@ function getMap(map_data){
   plotId += 1;
 }
 
-function getMap1(topic, query) {
-    // Add a loading indicator
-    const loadingMessage = document.createElement('p');
-    loadingMessage.innerText = 'Loading...';
-    loadingMessage.classList.add('bot-message')
-    chatBox.appendChild(loadingMessage);
-    fetch('/' + 'ngdr_map', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(query)
-    })
-    .then(response => response.json())
-    .then(data => {
-        // Remove the loading indicator
-        chatBox.removeChild(loadingMessage);
 
-        // Plotly.newPlot('map-container', mapData); // Remove this line
-        const mapContainer = document.createElement('div');
-        // mapContainer.innerHTML = data.map_html;
-        mapContainer.id = `map-container-${plotId}`;
-        console.log("mapContainerid", mapContainer.id)
-        mapContainer.classList.add('bot-message')
-        // chatBox.insertBefore(mapContainer, userMessageContainer);
-        // Use data.data and data.layout for map creation
-        appendMessage(mapContainer, false, isMap=true)
-        Plotly.newPlot(`map-container-${plotId}`, data.data, data.layout);
-        chatBox.scrollTop = chatBox.scrollHeight;
-        plotId += 1;
-    })
-    .catch((error) => {
-        console.log(error)
-    });
+// a function that will clear all the chat and  append a bot message when topic is selected and suggest some example questions to ask depending on the selected topic:
+function suggestQuestions(topic, button_text){
+  // clear all the chat
+  const chatMessages = document.querySelectorAll('.message-container');
+  chatMessages.forEach(message => {
+    if (message !== userMessageContainer){
+      chatBox.removeChild(message);
+    }
+  });
+  let message = "Great! You have selected the topic '" + button_text + "'. \n\nHere are some example questions you may ask: "
+  let question_list = []
+  if (topic === 'mines_and_minerals_act'){
+    question_list = MMDR_question_list
+  }
+  else if (topic === 'Mineral_auction_rules_2015'){
+    question_list = Auction_rules_question_list
+  }
+  else if (topic === 'Mines_and_minerals_evidence'){
+    question_list = Evidence_rules_question_list
+  }
+  else if (topic === 'ngdr_geochemistry'){
+    question_list = NGDR_question_list
+  }
+  for (let i = 0; i < question_list.length; i++){
+    message = message + "\n" + "🔸 " + question_list[i]
+  }
+  appendMessage(message, false)
 }
 
 
@@ -212,13 +220,13 @@ topicButtons.forEach(button => {
       chatInput.style.backgroundColor = "#ffffff"
     }
     currentTopic = button.dataset.topic;
+    suggestQuestions(currentTopic, button.textContent)
     if (currentTopic === 'ngdr_geochemistry') {
       chatbotMode = "NGDR"
     }
     else {
       chatbotMode = "RAG"
     }
-    // getMap(topic, "create a krigging map for cu in toposheet number 5K12");
   });
 });
 
