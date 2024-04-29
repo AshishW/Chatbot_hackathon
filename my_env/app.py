@@ -5,9 +5,22 @@ from dotenv import load_dotenv
 import os
 import re
 from geo_chem import generate_geochemistry_response
+import numpy as np
 
 
 app = Flask(__name__)
+
+
+def deep_convert_np_to_lists(obj):
+    if isinstance(obj, np.ndarray):
+        return obj.tolist()
+    elif isinstance(obj, dict):
+        return {k: deep_convert_np_to_lists(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [deep_convert_np_to_lists(item) for item in obj]
+    elif isinstance(obj, tuple):
+        return tuple(deep_convert_np_to_lists(item) for item in obj)
+    return obj
 
 def generate_response(user_query, topic):
   """
@@ -85,9 +98,11 @@ def ngdr_geochem_response():
     user_query = request.json["query"]
     # send this user_query to the ngdr main function then get the response and return it by jsonify after making it to a dictionary
     
-    # response = generate_geochemistry_response(user_query) 
-    # return jsonify(response)
-    data, layout = generate_ngdr_map()
+    response = generate_geochemistry_response(user_query) 
+    new_response = deep_convert_np_to_lists(response)
+    # print("RESPONSE:", new_response)
+    return jsonify(new_response)
+    # data, layout = generate_ngdr_map()
     return jsonify(data=data, layout=layout)
 
 

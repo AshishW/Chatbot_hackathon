@@ -45,7 +45,7 @@
     const MMDR_question_list = ["What is the Mines and Minerals Act 1957?", "What are the key provisions of the Mines and Minerals Act 1957?", "Section 25 in MMDR", "Why do we need MMDR act?", "What are the key amendments to the Mines and Minerals Act 1957?", "What are the different types of mineral concessions mentioned in the Act?"]
     const Auction_rules_question_list = ["What are the Mineral Auction Rules 2015?", "What are the key provisions of the Mineral Auction Rules 2015?", "What are the payment terms for a successful bidder in a mining lease auction?", "Explain the process of granting a Composite Licence."]
     const Evidence_rules_question_list = ["What are the Minerals (Evidence of Mineral Contents) Rules 2015?",  "To which minerals do these rules apply?", "What are the different stages of mineral exploration defined in the rules?", "Explain reporting Mineral Resources.",]
-    const NGDR_question_list = ["Create a kriging map for copper for the toposheet number 55K14", "Create a IDW map for al203 for the toposheet number 55P10","Tell me the maximum value for cu in the toposheet number 55K14", "what is the max and min values for the concentrations of hg in toposheet number 55P02?"]
+    const NGDR_question_list = ["Create a kriging map for copper for the toposheet number 55K14", "Create a IDW map for al2o3 for the toposheet number 55P10","Tell me the maximum value for cu in the toposheet number 55K14", "what is the max and min values for the concentrations of hg in toposheet number 55P02?"]
     if (!enable_input){
       chatInput.disabled = true
       chatInput.placeholder = "Select a topic to continue conversation..."
@@ -53,7 +53,7 @@
       chatInput.style.backgroundColor = "#f2f2f2"
     }
     // add logic such that the input is activated only when the button is clicked
-    function appendMessage(message, isUser, isMap = false) {
+    function appendMessage(message, isUser, isMap = false, isImage = false) {
       const messageElement = document.createElement('p');
       const profilePhoto = document.createElement('img');
       profilePhoto.classList.add('profile-photo');
@@ -72,6 +72,10 @@
       }
       else{
         messageElement.innerText = message;
+      }
+      if (isImage){
+        console.log(message)
+        messageElement.appendChild(message)
       }
       const messageContainer = document.createElement('div');
       messageContainer.classList.add('message-container');
@@ -116,28 +120,32 @@
         .then(data => { 
           console.log(data)
           chatBox.removeChild(loadingMessage);
-          if(data.data && data.layout){ // remove this if statement after getting the actual data as this is for test only
+          
+          /*if(data.data && data.layout){ // remove this if statement after getting the actual data as this is for test only
             getMap(data)
-          }
-          if (data['data_type'] === 'krigging_map'){ // check if the response is a krigging map
+          }*/
+
+          if (data[1] === 'kriging_map'){ // check if the response is a krigging map
             // change the logic handle here to display the map
-            //idw_data = data['fig']
-            //getMap(krigging_data)
-            getMap(data)
+            map_data = data[0][0]
+            getMap(map_data)
+            // getMap(data)
           }
-          else if (data['data_type'] === 'idw_map'){ //if it  contains base64 image for IDW map
+          else if (data[1] === 'idw_map'){ //if it  contains base64 image for IDW map
             //create dynmic image element that contains base64 image 
+            console.log("image string", data[0]['image_data'])
             const imageElement = document.createElement('img');
-            imageElement.src = `data:image/png;base64,${data['image']}`;
+            imageElement.src = `data:image/png;base64,${data[0]['image_data']}`;
             imageElement.classList.add('dynamic-map-container');
-            imageElement.id = `image-container-${plotId}`;
             imageElement.classList.add('bot-message');
-            appendMessage(imageElement, false)
+            imageElement.style="border-top: 0px;";
+            appendMessage(imageElement, false, isMap=true, isImage=true)
             chatBox.scrollTop = chatBox.scrollHeight;
             plotId += 1;
           }
-          else if (data['data_type'] === 'text'){ // if the response is not string from NGDR chatbot
-              message = data 
+
+          else if (data[1] === 'text'){ // if the response is not string from NGDR chatbot
+              message = data[0] 
               appendMessage(message, false);
             }
           // document.querySelector('input[name="query"]').value = '';

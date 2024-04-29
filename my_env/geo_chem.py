@@ -1,5 +1,7 @@
 import pandas as pd
 import numpy as np
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import spacy
 import plotly.graph_objects as go
@@ -8,12 +10,14 @@ from scipy.interpolate import griddata
 import base64
 import os
 
+
 # Get the directory of the current Python file
 script_dir = os.path.dirname(__file__)
 
 # Construct the relative path to the CSV file (assuming it's in the same directory)
 csv_file_path = os.path.join(script_dir, 'NGDR_Nagpur.csv')
 Nagpur_gdf = pd.read_csv(csv_file_path)
+
 
 import textdistance
 word_list = ["kriging","concentration","toposheet","interpolation","inverse distance weighted","idw","maximum","minimum","longitude","latitude","aluminum"]
@@ -29,6 +33,10 @@ def correct_typos(text, threshold=0.5):
             corrected_word = word
         corrected_text.append(corrected_word)
     return ' '.join(corrected_text)
+
+
+# In[5]:
+
 
 import re
 
@@ -131,11 +139,19 @@ def extract_chemicals(query):
 # else:
 #     print("No elements from the dictionary are present in the sentence.")
 
+
+# In[6]:
+
+
 def extract_topo_no(str1):
     toposheet_numbers = []
     toposheet_pattern = r'\b\d+[a-zA-Z]+\d+\b'
     toposheet_numbers = re.findall(toposheet_pattern,str1)
     return toposheet_numbers
+
+
+# In[7]:
+
 
 def create_kriging_map_from_query(query,df):
     t1 = extract_topo_no(query)
@@ -143,9 +159,21 @@ def create_kriging_map_from_query(query,df):
     
     for toposheet_no in t1:
         for element in e1:
-            generate_kriging_map(df,element, toposheet_no)
-            
-def generate_kriging_map(df, element, toposheet_number=None, variogram_model='spherical'):
+            max_value = df[element].max()
+            max_location = df[df[element] == max_value][['latitude', 'longitude']].iloc[0]
+            max_lat, max_lon = max_location['latitude'], max_location['longitude']
+            # Minimum value aur uske corresponding latitude, longitude find kar rahe hain
+            min_value = df[element].min()
+            min_location = df[df[element] == min_value][['latitude', 'longitude']].iloc[0]
+            min_lat, min_lon = min_location['latitude'], min_location['longitude']
+            return generate_kriging_map(df,element,max_value,max_location,max_lat,max_lon,min_value,min_location,min_lat,min_lon, toposheet_no,)
+
+
+# In[179]:
+
+
+def generate_kriging_map(df, element, max_value, max_location, max_lat, max_lon, min_value, min_location, min_lat, min_lon, toposheet_number=None, variogram_model='spherical'):
+    # Function body goes here
      # Filter the DataFrame by the specified toposheet number if provided
     if toposheet_number is not None:
         df = df[df['toposheet'] == toposheet_number]
@@ -157,6 +185,7 @@ def generate_kriging_map(df, element, toposheet_number=None, variogram_model='sp
     # Perform Ordinary Kriging
     OK = OrdinaryKriging(df['longitude'], df['latitude'], df[element], variogram_model=variogram_model)
     z_interp, ss = OK.execute('grid', gridx, gridy)
+    
     
     # Create the contour plot
     contour = go.Contour(
@@ -189,26 +218,70 @@ def generate_kriging_map(df, element, toposheet_number=None, variogram_model='sp
     fig.add_trace(scatter)
     
     # Update layout with title and labels
-    fig.update_layout(
-        title=f'Geochemical Kriging Map for {element}' + (f' (Toposheet {toposheet_number})' if toposheet_number else ''),
-        xaxis_title='Longitude',
-        yaxis_title='Latitude',
-        coloraxis_colorbar=dict(title=f'{element} Concentration')
+#     fig.update_layout(
+#         title=f'Geochemical Kriging Map for {element}' + (f' (Toposheet {toposheet_number})' if toposheet_number else ''),
+#         xaxis_title='Longitude',
+#         yaxis_title='Latitude',
+#         coloraxis_colorbar=dict(title=f'{element} Concentration')
+#     )
+    fig.add_annotation(
+    text=f"<i>Maximum value (in ppm): <b>{max_value}</b> at longitude <b>{max_lat}</b> and latitude <b>{max_lat}</b></i>",
+    xref="paper", yref="paper",
+    x=0.5, y=1.2, showarrow=False,
+    font=dict(size=14),
+    align="center"
     )
-    print("Figure",fig)
-    # Show the plot
-    fig.show()
-    
 
-def create_idw_map_from_query(query,df,threshold=100):
+    fig.add_annotation(
+    text=f"<i>Minimum value (in ppm): <b>{min_value}</b> at longitude <b>{min_lat}</b> and latitude <b>{min_lat}</b></i>",
+    xref="paper", yref="paper",
+    x=0.5, y=1.1, showarrow=False,
+    font=dict(size=14),
+    align="center"
+    )
+
+    # Add a title to the map
+    fig.update_layout(
+    title=f"<b>Stream Sediment samples showing {element} Values(ppm)</b>",
+    title_x=0.5,  # Center the title
+    title_y=0.95,  # Add some space from the top
+    margin=dict(t=120)  # Adjust margin to accommodate the annotations and title
+    )
+#     fig.show()
+    data = fig.to_dict()
+    layout = fig.to_dict()
+    return (data,layout)
+
+
+# In[103]:
+
+
+def create_idw_map_from_query(query,df):
     t2 = extract_topo_no(query)
     e2 = extract_chemicals(query)
-       
-    for toposheet_no in t2:
+    threshold_percentile = 100   
+    for toposheet_number in t2:
         for element in e2:
-            generate_idw_map(df,element,toposheet_no,threshold) 
-    
-def generate_idw_map(df, element, toposheet_number, threshold_percentile):
+            max_value = df[element].max()
+            max_location = df[df[element] == max_value][['latitude', 'longitude']].iloc[0]
+            max_lat, max_lon = max_location['latitude'], max_location['longitude']
+            # Minimum value aur uske corresponding latitude, longitude find kar rahe hain
+            min_value = df[element].min()
+            min_location = df[df[element] == min_value][['latitude', 'longitude']].iloc[0]
+            min_lat, min_lon = min_location['latitude'], min_location['longitude']
+            return generate_idw_map(df, element,max_value, max_location, max_lat, max_lon, min_value, min_location, min_lat, min_lon, toposheet_number, threshold_percentile) 
+
+
+# In[181]:
+
+
+import matplotlib.pyplot as plt
+import numpy as np
+from scipy.interpolate import griddata
+import io
+import base64
+
+def generate_idw_map(df, element,max_value, max_location, max_lat, max_lon, min_value, min_location, min_lat, min_lon, toposheet_number, threshold_percentile):
     # Filter the DataFrame by the specified toposheet number
     gdf = df[df['toposheet'] == toposheet_number]
 
@@ -240,28 +313,46 @@ def generate_idw_map(df, element, toposheet_number, threshold_percentile):
     plt.imshow(grid_z.T, extent=(min(gdf['longitude']), max(gdf['longitude']), min(gdf['latitude']), max(gdf['latitude'])), origin='lower')
     plt.scatter(anomalies['longitude'], anomalies['latitude'], c='red')  # Anomalies marked in red
     plt.colorbar(label='Deviation from Baseline')
-    plt.title(f'Geochemical IDW Map for {element} (Toposheet {toposheet_number})')
+    plt.title(f'Geochemical IDW Map for {element} (Toposheet {toposheet_number})\n\nMaximum value (in ppm): {max_value} at longitude {max_lat} and latitude {max_lat}\nMinimum value (in ppm): {min_value} at longitude {min_lat} and latitude {min_lat}')
+
     plt.xlabel('Longitude')
     plt.ylabel('Latitude')
-    plt.show()
+    
+  
+      # Convert IDW map to base64 encoded image
+    buffer = io.BytesIO()
+    plt.savefig(buffer, format='png')  # Save the plot to the buffer in PNG format
+    buffer.seek(0)
+    image_data = base64.b64encode(buffer.read()).decode('utf-8')  # Convert the image buffer to base64 string
+    output = {"image_data": image_data}
+    plt.close()  # Close the plot to prevent it from being displayed or printed
+    
+    return output  # Return the base64 encoded image data as a dictionary
+#     plt.show()
 
-def find_max_values(query,df):
+
+# In[182]:
+
+
+def find_max_values(query, df):
     toposheet_numbers = extract_topo_no(query)
     elements = extract_chemicals(query)
-    max_value_results = []
     for toposheet_number in toposheet_numbers:
         for element in elements:
             max_value = df[element].max()
             max_location = df[df[element] == max_value][['latitude', 'longitude']].iloc[0]
             max_lat, max_lon = max_location['latitude'], max_location['longitude']
             max_value_result = f"For the toposheet {toposheet_number}, the element {element} has maximum PPM value {max_value} at latitude {max_lat} and longitude {max_lon}."
-            max_value_results.append(max_value_result)
-    return max_value_results
+            return max_value_result
 
-def find_min_values(query,df):
+
+# In[183]:
+
+
+def find_min_values(query, df):
+#     print("[INFO:] Finding the min values")
     toposheet_numbers = extract_topo_no(query)
     elements = extract_chemicals(query)
-    min_value_results = []
     for toposheet_number in toposheet_numbers:
         for element in elements:
             min_value = df[element].min()
@@ -270,13 +361,15 @@ def find_min_values(query,df):
     
             # Results ko sentence mein display kar rahe hain
             min_value_result = f"For the toposheet {toposheet_number}, the element {element} has minimum PPM value {min_value} at latitude {min_lat} and longitude {min_lon}."
-            min_value_results.append(min_value_result)
-    return min_value_results
+            return min_value_result
 
-def find_both_min_max(query,df):
+
+# In[184]:
+
+
+def find_both_min_max(query, df):
     toposheet_numbers = extract_topo_no(query)
     elements = extract_chemicals(query)
-    min_max_value_results = []
     for toposheet_number in toposheet_numbers:
         for element in elements:
             max_value = df[element].max()
@@ -286,11 +379,14 @@ def find_both_min_max(query,df):
             min_value = df[element].min()
             min_location = df[df[element] == min_value][['latitude', 'longitude']].iloc[0]
             min_lat, min_lon = min_location['latitude'], min_location['longitude']
-    
+
             # Results ko sentence mein display kar rahe hain
             min_max_value_result = f"For the toposheet {toposheet_number}, the element {element} has maximum PPM value {max_value} at latitude {max_lat} and longitude {max_lon}, and has minimum PPM value {min_value} at latitude {min_lat} and longitude {min_lon}."
-            min_max_value_results.append(min_max_value_result)
-    return min_max_value_results
+            return min_max_value_result
+
+
+# In[185]:
+
 
 def split_query_smartly(query):
     element_names = ['silicon dioxide', 'aluminum oxide', 'iron(III) oxide', 'titanium dioxide', 'calcium oxide', 'magnesium oxide', 'manganese(II) oxide', 'sodium oxide', 'potassium oxide', 'phosphorus pentoxide', 'loss on ignition', 'barium', 'gallium', 'scandium', 'vanadium', 'thorium', 'lead', 'nickel', 'cobalt', 'rubidium', 'strontium', 'yttrium', 'zirconium', 'niobium', 'chromium', 'copper', 'zinc', 'gold', 'lithium', 'cesium', 'arsenic', 'antimony', 'bismuth', 'selenium', 'silver', 'beryllium', 'germanium', 'molybdenum', 'tin', 'lanthanum', 'cerium', 'praseodymium', 'neodymium', 'samarium', 'europium', 'terbium', 'gadolinium', 'dysprosium', 'holmium', 'erbium', 'thulium', 'ytterbium', 'lutetium', 'hafnium', 'tantalum', 'tungsten', 'uranium', 'platinum', 'palladium', 'indium', 'fluorine', 'tellurium', 'thallium', 'mercury', 'cadmium']
@@ -343,60 +439,88 @@ def split_query_smartly(query):
     
     return subqueries
 
+# # Example usage
+# queries = [
+#     "Generate a kriging map displaying copper and mercury data for toposheet 55K14. Now tell the maximum and minimum latitude and longitude coordinates for gold in toposheet 55P10."
+# ]
+
+# for query in queries:
+#     print(f"Original Query: {query}")
+#     subqueries = split_query_smartly(query)
+#     print("Subqueries:", subqueries)
+#     print()
+
+
+# In[193]:
+
+
 def process_subqueries(subqueries):
-    combined_output = []  # Initialize a list to store combined output
-    
-    for subquery in subqueries:
-        print(f"Processing subquery: {subquery}")
-        output = "Apologies, but I'm only able to provide information related to Nagpur data. Please enter a valid query about Nagpur. Thank you for your understanding and patience"        
-        # Check conditions and call functions accordingly
-        if 'maximum' in subquery.lower() and 'minimum' in subquery.lower():
-            print("Calling the function for min and max")
-            output = find_both_min_max(subquery, df=Nagpur_gdf)
-            
-        # Check if the subquery mentions both latitude and longitude
-        elif all(word in subquery.lower() for word in ['maximum', 'minimum', 'latitude', 'longitude']):
-            print('Only Max function is called')
-            # Call the function to handle maximum latitude and longitude values
-            output = handle_max_latitude_longitude(subquery)
-            
-        # Check if the subquery mentions 'idw interpolation map'
-        elif 'idw' in subquery.lower() and 'inverse distance weighted map' in subquery.lower():
-            print("Calling the IDW function")
-            output = create_idw_map_from_query(subquery, df=Nagpur_gdf)
-            
-        elif 'idw' in subquery.lower() and "kriging" in subquery.lower():
-            print("Calling both kriging and IDW function")
-            output_idw = create_idw_map_from_query(subquery, df=Nagpur_gdf)
-            output_kriging = create_kriging_map_from_query(subquery, df=Nagpur_gdf)
-            output = (output_idw, output_kriging)  # Store both outputs in a tuple
-            
-        elif 'kriging' in subquery.lower():
-            print("Calling the kriging function")
-            output = create_kriging_map_from_query(subquery, df=Nagpur_gdf)
-#         elif:
-#             print("None")
-            
-        elif 'idw' in subquery.lower():
-            print("Invoking the IDW mage...")
-            output = create_idw_map_from_query(subquery, df=Nagpur_gdf)
-            
-        # ... (Continue with the rest of your conditions)
-        
-        # Add the output to the combined_output list
-        combined_output.append(output)
-    if not combined_output:
-        apology_message = "Apologies, but I'm only able to provide information related to Nagpur data. Please enter a valid query about Nagpur. Thank you for your understanding and patience."
-        combined_output.append(apology_message)
-    return combined_output
+#     combined_output = []  # Initialize a list to store combined output
+    df = Nagpur_gdf
+    try: 
+        for subquery in subqueries:
+            print(f"Processing subquery: {subquery}")
+            if ('maximum' in subquery.lower() and 'minimum' in subquery.lower()) or ('max' in subquery.lower() and 'min' in subquery.lower()):
+                print("Calling the function for min and max")
+                output = find_both_min_max(subquery, df=Nagpur_gdf) 
+            elif ('maximum' in subquery.lower()) or ('max' in subquery.lower()):
+                print('Calling Max Fun')
+                output = find_max_values(subquery,df)
+            elif ('minimum' in subquery.lower()) or ('min' in subquery.lower()):
+                print('Calling Min Fun')
+                output = find_min_values(subquery,df)      
+                
+            # Check if the subquery mentions 'idw interpolation map'
+            elif 'idw' in subquery.lower() or 'inverse distance weighted map' in subquery.lower():
+                print("Calling the IDW function")
+                output = create_idw_map_from_query(subquery, df)           
+                
+            elif 'idw' in subquery.lower() and "kriging" in subquery.lower():
+                print("Calling both kriging and IDW function")
+                output_idw = create_idw_map_from_query(subquery, df)
+                output_kriging = create_kriging_map_from_query(subquery, df)
+                output = (output_idw, output_kriging)  # Store both outputs in a tuple
+                
+            elif 'kriging' in subquery.lower():
+                print("Calling the kriging function")
+                output = create_kriging_map_from_query(subquery, df)
+            else:
+                apology_message = "I'm only able to provide information related to Nagpur data. Please enter a valid query about Nagpur toposheet data. Thank you for your understanding and patience."
+                print(apology_message)
+        return output 
+    except Exception as e:
+        print("Error:", e)
+        return "There was problem processing your query, please try again and make sure the query is valid on Nagpur toposheet data. Thank you for your understanding and patience."
+# Example usage:
+# SubQueries = [
+#     'the maximum and minimum longitude and latitude values for 55K14 for gold',
+#     'a kriging map for the gold for 55K14'
+# ]
+
+# combined_output = process_subqueries(SubQueries)
+# print("Combined Output:", combined_output)
+
+
+# In[200]:
+
 
 def generate_geochemistry_response(query):
     corrected_sentence = correct_typos(query)
     Subqueries = split_query_smartly(corrected_sentence)
     response = process_subqueries(Subqueries)
-    return response
+    if response == None:
+        response = "Sorry, I am unable to respond to this query. I am currently equipped to provide information on Nagpur Geochemistry Toposheet data and can handle one query at a time. Thank you for your understanding."
+    data_type = "text"
+    if type(response) == dict:
+        data_type = "idw_map"
+    elif type(response) == tuple:
+        data_type = "kriging_map"
+    return response, data_type
 
-# generate_geochem_response('Create a kriging map for copper and gold for the toposheet number 55K14')
 
+# In[202]:
+
+
+# generate_response('Display m a krigin map for copper for 55K14')
 if __name__ == "__main__":
     generate_geochemistry_response(query="Create a kriging map for copper for the toposheet number 55K14")
