@@ -4,7 +4,8 @@ import requests
 from dotenv import load_dotenv
 import os
 import re
-# import model  # Import your trained model
+from geo_chem import generate_geochemistry_response
+
 
 app = Flask(__name__)
 
@@ -17,7 +18,8 @@ def generate_response(user_query, topic):
   # get the response from the rag model server and return it
   load_dotenv()
   rag_server_url = os.getenv('SERVER_URL')  # Get the server URL from the environment variables
-
+  if (rag_server_url is None) or (rag_server_url == ""):
+      return "The server URL is not set. Please set it in the environment variables."
   response = requests.post(rag_server_url + '/chatbot', json={"query": user_query, "topic": topic})
   if response:
       response_json = response.json()
@@ -27,7 +29,7 @@ def generate_response(user_query, topic):
           answer = re.sub(r'\*', "🔸", answer)
           answer = re.sub(r'-(?=\s)', "🔸", answer)
           # context_items = response_json.get('context_items', [])
-          if ('so I cannot answer this question from the provided context.' in answer) or (('The context does not mention any information' or 'The context items do not provide' or 'The context does not') in answer):
+          if (('so I cannot answer this question from the provided context.' in answer) or ('The context does not mention any information' in answer) or ('The context does not' in answer)):
              answer += '\n\n 📔 Note: Sometimes I am unable to answer the question as I am still learning and improving. Please provide more context or rephrase the question.'
           return answer
       else:
@@ -83,8 +85,8 @@ def ngdr_geochem_response():
     user_query = request.json["query"]
     # send this user_query to the ngdr main function then get the response and return it by jsonify after making it to a dictionary
     
-    # response = generate_geochemistry_response(user_query) # the response should already be jsonified
-    # return response
+    # response = generate_geochemistry_response(user_query) 
+    # return jsonify(response)
     data, layout = generate_ngdr_map()
     return jsonify(data=data, layout=layout)
 

@@ -2,8 +2,18 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import spacy
+import plotly.graph_objects as go
+from pykrige.ok import OrdinaryKriging
+from scipy.interpolate import griddata
+import base64
+import os
 
-Nagpur_gdf = pd.read_csv('NGDR_Nagpur.csv')
+# Get the directory of the current Python file
+script_dir = os.path.dirname(__file__)
+
+# Construct the relative path to the CSV file (assuming it's in the same directory)
+csv_file_path = os.path.join(script_dir, 'NGDR_Nagpur.csv')
+Nagpur_gdf = pd.read_csv(csv_file_path)
 
 import textdistance
 word_list = ["kriging","concentration","toposheet","interpolation","inverse distance weighted","idw","maximum","minimum","longitude","latitude","aluminum"]
@@ -380,13 +390,13 @@ def process_subqueries(subqueries):
         combined_output.append(apology_message)
     return combined_output
 
-def generate_geochem_response(query):
+def generate_geochemistry_response(query):
     corrected_sentence = correct_typos(query)
     Subqueries = split_query_smartly(corrected_sentence)
     response = process_subqueries(Subqueries)
     return response
 
-generate_geochem_response('Create a kriging map for copper and gold for the toposheet number 55K14')
+# generate_geochem_response('Create a kriging map for copper and gold for the toposheet number 55K14')
 
 if __name__ == "__main__":
-    generate_geochem_response(query="Create a kriging map for copper for the toposheet number 55K14")
+    generate_geochemistry_response(query="Create a kriging map for copper for the toposheet number 55K14")
