@@ -4,28 +4,47 @@ import requests
 from dotenv import load_dotenv
 import os
 import re
-from geo_chem import generate_geochemistry_response
+from my_env.geo_chem import generate_geochemistry_response
 import numpy as np
 
 
 app = Flask(__name__)
 
 
+# def deep_convert_np_to_lists(obj):
+#     if isinstance(obj, np.ndarray):
+#         return obj.tolist()
+#     elif isinstance(obj, dict):
+#         return {k: deep_convert_np_to_lists(v) for k, v in obj.items()}
+#     elif isinstance(obj, list):
+#         return [deep_convert_np_to_lists(item) for item in obj]
+#     elif isinstance(obj, tuple):
+#         return tuple(deep_convert_np_to_lists(item) for item in obj)
+#     return obj
+
 def deep_convert_np_to_lists(obj):
     if isinstance(obj, np.ndarray):
+        # Convert NaNs to None in a NumPy array
+        obj = np.where(np.isnan(obj), None, obj)
         return obj.tolist()
     elif isinstance(obj, dict):
+        # Recursively apply to dictionary values
         return {k: deep_convert_np_to_lists(v) for k, v in obj.items()}
     elif isinstance(obj, list):
+        # Recursively apply to list items
         return [deep_convert_np_to_lists(item) for item in obj]
     elif isinstance(obj, tuple):
+        # Recursively apply to tuple items
         return tuple(deep_convert_np_to_lists(item) for item in obj)
+    elif obj != obj:
+        # Replace standalone NaNs with None
+        return None
     return obj
+
 
 def generate_response(user_query, topic):
   """
-  This function will be replaced with your actual model logic in the future.
-  For now, it returns a dummy response.
+  This function sends a post request to the RAG model server with the user_query and topic.
   """
   # send post request to the rag model flask server with user_query and topic
   # get the response from the rag model server and return it

@@ -17,7 +17,7 @@ script_dir = os.path.dirname(__file__)
 # Construct the relative path to the CSV file (assuming it's in the same directory)
 csv_file_path = os.path.join(script_dir, 'NGDR_Nagpur.csv')
 Nagpur_gdf = pd.read_csv(csv_file_path)
-
+# Nagpur_gdf.fillna(0.0, inplace=True)
 
 import textdistance
 word_list = ["kriging","concentration","toposheet","interpolation","inverse distance weighted","idw","maximum","minimum","longitude","latitude","aluminum"]
@@ -129,19 +129,6 @@ def extract_chemicals(query):
     # Return the list of extracted elements
     return elements
 
-# Example usage
-# sentence = "Can you generate a map for the element aluminum oxide, copper,silicon dioxide."
-# extracted_elements = extract_chemicals(response)
-# print(extracted_elements)
-# # Print message if elements are present in the sentence
-# if extracted_elements:
-#     print(f"The following elements are present in the sentence: {', '.join(extracted_elements)}")
-# else:
-#     print("No elements from the dictionary are present in the sentence.")
-
-
-# In[6]:
-
 
 def extract_topo_no(str1):
     toposheet_numbers = []
@@ -149,8 +136,6 @@ def extract_topo_no(str1):
     toposheet_numbers = re.findall(toposheet_pattern,str1)
     return toposheet_numbers
 
-
-# In[7]:
 
 
 def create_kriging_map_from_query(query,df):
@@ -168,8 +153,6 @@ def create_kriging_map_from_query(query,df):
             min_lat, min_lon = min_location['latitude'], min_location['longitude']
             return generate_kriging_map(df,element,max_value,max_location,max_lat,max_lon,min_value,min_location,min_lat,min_lon, toposheet_no,)
 
-
-# In[179]:
 
 
 def generate_kriging_map(df, element, max_value, max_location, max_lat, max_lon, min_value, min_location, min_lat, min_lon, toposheet_number=None, variogram_model='spherical'):
@@ -217,15 +200,8 @@ def generate_kriging_map(df, element, max_value, max_location, max_lat, max_lon,
     # Add the scatter plot on top of the contour plot
     fig.add_trace(scatter)
     
-    # Update layout with title and labels
-#     fig.update_layout(
-#         title=f'Geochemical Kriging Map for {element}' + (f' (Toposheet {toposheet_number})' if toposheet_number else ''),
-#         xaxis_title='Longitude',
-#         yaxis_title='Latitude',
-#         coloraxis_colorbar=dict(title=f'{element} Concentration')
-#     )
     fig.add_annotation(
-    text=f"<i>Maximum value (in ppm): <b>{max_value}</b> at longitude <b>{max_lat}</b> and latitude <b>{max_lat}</b></i>",
+    text=f"<i>Maximum value (in ppm): <b>{max_value}</b> at longitude <b>{max_lon}</b> and latitude <b>{max_lat}</b></i>",
     xref="paper", yref="paper",
     x=0.5, y=1.2, showarrow=False,
     font=dict(size=14),
@@ -233,7 +209,7 @@ def generate_kriging_map(df, element, max_value, max_location, max_lat, max_lon,
     )
 
     fig.add_annotation(
-    text=f"<i>Minimum value (in ppm): <b>{min_value}</b> at longitude <b>{min_lat}</b> and latitude <b>{min_lat}</b></i>",
+    text=f"<i>Minimum value (in ppm): <b>{min_value}</b> at longitude <b>{min_lon}</b> and latitude <b>{min_lat}</b></i>",
     xref="paper", yref="paper",
     x=0.5, y=1.1, showarrow=False,
     font=dict(size=14),
@@ -250,7 +226,7 @@ def generate_kriging_map(df, element, max_value, max_location, max_lat, max_lon,
 #     fig.show()
     data = fig.to_dict()
     layout = fig.to_dict()
-    return (data,layout)
+    return (data,layout, 'kriging_map')
 
 
 # In[103]:
@@ -281,57 +257,112 @@ from scipy.interpolate import griddata
 import io
 import base64
 
-def generate_idw_map(df, element,max_value, max_location, max_lat, max_lon, min_value, min_location, min_lat, min_lon, toposheet_number, threshold_percentile):
+# def generate_idw_map(df, element,max_value, max_location, max_lat, max_lon, min_value, min_location, min_lat, min_lon, toposheet_number, threshold_percentile):
+#     # Filter the DataFrame by the specified toposheet number
+#     gdf = df[df['toposheet'] == toposheet_number]
+
+#     # Step 1: Determine Baseline
+#     baseline = np.median(gdf[element])  # Using median as the baseline
+
+#     # Step 2: Calculate Deviation
+#     deviation = gdf[element] - baseline
+
+#     # Step 3: Statistical Analysis
+#     std_dev = np.std(deviation)
+#     percentile_value = np.percentile(deviation, threshold_percentile)
+
+#     # Step 4: Define Anomaly Threshold
+#     anomaly_threshold = percentile_value  # Setting the specified percentile as the threshold
+
+#     # Step 5: Identify Anomalies
+#     anomalies = gdf[deviation > anomaly_threshold]
+
+#     # Step 6: Anomaly Map
+#     # Create grid coordinates for interpolation
+#     grid_x, grid_y = np.mgrid[min(gdf['longitude']):max(gdf['longitude']):100j, min(gdf['latitude']):max(gdf['latitude']):100j]
+
+#     # Interpolate using IDW
+#     grid_z = griddata((gdf['longitude'], gdf['latitude']), deviation, (grid_x, grid_y), method='cubic')
+
+#     # Plotting the IDW map
+#     plt.figure(figsize=(10, 8))
+#     plt.imshow(grid_z.T, extent=(min(gdf['longitude']), max(gdf['longitude']), min(gdf['latitude']), max(gdf['latitude'])), origin='lower')
+#     plt.scatter(anomalies['longitude'], anomalies['latitude'], c='red')  # Anomalies marked in red
+#     plt.colorbar(label='Deviation from Baseline')
+#     plt.title(f'Geochemical IDW Map for {element} (Toposheet {toposheet_number})\n\nMaximum value (in ppm): {max_value} at longitude {max_lat} and latitude {max_lat}\nMinimum value (in ppm): {min_value} at longitude {min_lat} and latitude {min_lat}')
+
+#     plt.xlabel('Longitude')
+#     plt.ylabel('Latitude')
+    
+  
+#     buffer = io.BytesIO()
+#     plt.savefig(buffer, format='png')  # Save the plot to the buffer in PNG format
+#     buffer.seek(0)
+#     image_data = base64.b64encode(buffer.read()).decode('utf-8')  # Convert the image buffer to base64 string
+#     output = {"image_data": image_data}
+#     plt.close()  # Close the plot to prevent it from being displayed or printed
+    
+#     return output  # Return the base64 encoded image data as a dictionary
+
+def generate_idw_map(df, element, max_value, max_location, max_lat, max_lon, min_value, min_location, min_lat, min_lon, toposheet_number, threshold_percentile):
     # Filter the DataFrame by the specified toposheet number
     gdf = df[df['toposheet'] == toposheet_number]
 
-    # Step 1: Determine Baseline
-    baseline = np.median(gdf[element])  # Using median as the baseline
+    # Determine Baseline
+    baseline = np.median(gdf[element])
 
-    # Step 2: Calculate Deviation
+    # Calculate Deviation
     deviation = gdf[element] - baseline
 
-    # Step 3: Statistical Analysis
+    # Statistical Analysis
     std_dev = np.std(deviation)
     percentile_value = np.percentile(deviation, threshold_percentile)
 
-    # Step 4: Define Anomaly Threshold
-    anomaly_threshold = percentile_value  # Setting the specified percentile as the threshold
+    # Define Anomaly Threshold
+    anomaly_threshold = percentile_value
 
-    # Step 5: Identify Anomalies
+    # Identify Anomalies
     anomalies = gdf[deviation > anomaly_threshold]
 
-    # Step 6: Anomaly Map
     # Create grid coordinates for interpolation
     grid_x, grid_y = np.mgrid[min(gdf['longitude']):max(gdf['longitude']):100j, min(gdf['latitude']):max(gdf['latitude']):100j]
 
     # Interpolate using IDW
     grid_z = griddata((gdf['longitude'], gdf['latitude']), deviation, (grid_x, grid_y), method='cubic')
 
-    # Plotting the IDW map
-    plt.figure(figsize=(10, 8))
-    plt.imshow(grid_z.T, extent=(min(gdf['longitude']), max(gdf['longitude']), min(gdf['latitude']), max(gdf['latitude'])), origin='lower')
-    plt.scatter(anomalies['longitude'], anomalies['latitude'], c='red')  # Anomalies marked in red
-    plt.colorbar(label='Deviation from Baseline')
-    plt.title(f'Geochemical IDW Map for {element} (Toposheet {toposheet_number})\n\nMaximum value (in ppm): {max_value} at longitude {max_lat} and latitude {max_lat}\nMinimum value (in ppm): {min_value} at longitude {min_lat} and latitude {min_lat}')
+    # Create the contour plot
+    contour = go.Contour(
+        z=grid_z.T,
+        x=np.linspace(min(gdf['longitude']), max(gdf['longitude']), 100),
+        y=np.linspace(min(gdf['latitude']), max(gdf['latitude']), 100),
+        colorscale='Viridis',
+        colorbar=dict(title='Deviation from Baseline')
+    )
 
-    plt.xlabel('Longitude')
-    plt.ylabel('Latitude')
+    # Create the scatter plot for anomalies
+    scatter = go.Scatter(
+        x=anomalies['longitude'],
+        y=anomalies['latitude'],
+        mode='markers',
+        marker=dict(color='red', size=5),
+        name='Anomalies'
+    )
+
+    # Define the layout
+    layout = go.Layout(
+        title=f'Geochemical IDW Map for {element} (Toposheet {toposheet_number})<br>'
+              f'Maximum value (in ppm): {max_value} at longitude {max_lon} and latitude {max_lat}<br>'
+              f'Minimum value (in ppm): {min_value} at longitude {min_lon} and latitude {min_lat}',
+        xaxis=dict(title='Longitude'),
+        yaxis=dict(title='Latitude')
+    )
     
-  
-      # Convert IDW map to base64 encoded image
-    buffer = io.BytesIO()
-    plt.savefig(buffer, format='png')  # Save the plot to the buffer in PNG format
-    buffer.seek(0)
-    image_data = base64.b64encode(buffer.read()).decode('utf-8')  # Convert the image buffer to base64 string
-    output = {"image_data": image_data}
-    plt.close()  # Close the plot to prevent it from being displayed or printed
-    
-    return output  # Return the base64 encoded image data as a dictionary
-#     plt.show()
+    # Create the figure and plot it
+    fig = go.Figure(data=[contour, scatter], layout=layout)
+    data = fig.to_dict()
+    layout = fig.to_dict()
+    return (data, layout, 'idw_map')
 
-
-# In[182]:
 
 
 def find_max_values(query, df):
@@ -439,19 +470,6 @@ def split_query_smartly(query):
     
     return subqueries
 
-# # Example usage
-# queries = [
-#     "Generate a kriging map displaying copper and mercury data for toposheet 55K14. Now tell the maximum and minimum latitude and longitude coordinates for gold in toposheet 55P10."
-# ]
-
-# for query in queries:
-#     print(f"Original Query: {query}")
-#     subqueries = split_query_smartly(query)
-#     print("Subqueries:", subqueries)
-#     print()
-
-
-# In[193]:
 
 
 def process_subqueries(subqueries):
@@ -511,16 +529,12 @@ def generate_geochemistry_response(query):
     if response == None:
         response = "Sorry, I am unable to respond to this query. I am currently equipped to provide information on Nagpur Geochemistry Toposheet data and can handle one query at a time. Thank you for your understanding."
     data_type = "text"
-    if type(response) == dict:
+    if type(response) == tuple and response[2]=='idw_map':
         data_type = "idw_map"
-    elif type(response) == tuple:
+    elif type(response) == tuple and response[2]=='kriging_map':
         data_type = "kriging_map"
     return response, data_type
 
 
-# In[202]:
-
-
-# generate_response('Display m a krigin map for copper for 55K14')
 if __name__ == "__main__":
     generate_geochemistry_response(query="Create a kriging map for copper for the toposheet number 55K14")

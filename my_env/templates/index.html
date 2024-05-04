@@ -8,42 +8,54 @@
 <body>
   <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
   <div class="container">
+    <h2><span class="chatbot-title-heading">Pebble AI: </span><span class="chatbot-title-sub-heading">Explore. Discover. Analyze.</span></h2>
     <div class="chat-box">
       <div class="initial-greet-container">
         <img src="{{ url_for('static', filename='bot.png') }}" class="profile-photo" style="margin-bottom:7rem ;">
         <div class="sub_greet_container">
-        <p class="bot-message">
-          Hello and welcome! My name is Pebble, your dedicated AI assistant. I'm here to guide you through the intricacies of NGDR data & laws and regulations from the ministry of mines. What can I assist you with today?                                                                                              
-        </p>
+          <p class="bot-message">
+            Hello and welcome! My name is Pebble, your dedicated AI assistant. I'm here to guide you through the intricacies of NGDR data & laws and regulations from the ministry of mines. What can I assist you with today?                                                                                              
+          </p>
 
-        <div class="topic-selection">
-          <button class="topic-button" data-topic="mines_and_minerals_act">Mines and Minerals(MMDR) Act 1957</button>
-          <button class="topic-button" data-topic="Mineral_auction_rules_2015">Mineral auction rules 2015</button>
-          <button class="topic-button" data-topic="Mines_and_minerals_evidence">Minerals (Evidence of Mineral Contents) Rules 2015</button>
-          <button class="topic-button" data-topic="ngdr_geochemistry">NGDR Geochemistry Repository</button>
-        </div>
+          <div class="topic-selection">
+            <button class="topic-button" data-topic="mines_and_minerals_act">Mines and Minerals(MMDR) Act 1957</button>
+            <button class="topic-button" data-topic="Mineral_auction_rules_2015">Mineral auction rules 2015</button>
+            <button class="topic-button" data-topic="Mines_and_minerals_evidence">Minerals (Evidence of Mineral Contents) Rules 2015</button>
+            <button class="topic-button" data-topic="ngdr_geochemistry">NGDR Geochemistry Repository</button>
+          </div>
       </div>
       </div>
-      <div class="user-message-container">
-        <form class="user-message-input-form" method="POST" action="/get_response">
-          <input class="query-input-txtbox" type="text" name="query" placeholder="Type your message here..." required>
-          <button class="query-submit-button" type="submit">Send</button>
-        </form>
-      </div>
+      <div class="bottom-of-chatbox"></div>
+    </div>
+    <div class="user-message-container">
+      <form class="user-message-input-form" method="POST" action="/get_response">
+        <input class="query-input-txtbox" type="text" name="query" placeholder="Type your message here..." required>
+        <button class="query-submit-button" type="submit">&#10147;</button>
+      </form>
     </div>
   </div>
   <!-- <script src="{{ url_for('static', filename='chatbot_helper_functions.js') }}"></script> -->
   <script>
     const chatBox = document.querySelector('.chat-box');
     const userMessageContainer = document.querySelector('.user-message-container');
+    const bottomOfChatbox = document.querySelector('.bottom-of-chatbox');
     let chatbotMode = "NGDR" //option "NGDR"/"RAG"
     const chatInput = document.querySelector('.query-input-txtbox');
     let enable_input = false
     let currentTopic = null;
     let plotId = 0;
 
-    const MMDR_question_list = ["What is the Mines and Minerals Act 1957?", "What are the key provisions of the Mines and Minerals Act 1957?", "Section 25 in MMDR", "Why do we need MMDR act?", "What are the key amendments to the Mines and Minerals Act 1957?", "What are the different types of mineral concessions mentioned in the Act?"]
-    const Auction_rules_question_list = ["What are the Mineral Auction Rules 2015?", "What are the key provisions of the Mineral Auction Rules 2015?", "What are the payment terms for a successful bidder in a mining lease auction?", "Explain the process of granting a Composite Licence."]
+    const MMDR_question_list = ["What is the Mines and Minerals Act 1957?", "What are the key provisions of the Mines and Minerals Act 1957?", "Section 25 in MMDR", "Why do we need MMDR act?", "What is the purpose of the District Mineral Foundation?", "What is the power of the Central Government to issue directions to the State Governments?", "What are the rights and liabilities of a holder of a prospecting license or mining lease under this Act?", "What are the powers of entry and inspection granted to the Central Government and the State Governments under this Act?", "What are the different types of mineral concessions mentioned in the Act?"]
+    const Auction_rules_question_list = ["What are the Mineral Auction Rules 2015?", 
+                    "What are the key provisions of the Mineral Auction Rules 2015?",
+                    "What are the payment terms for a successful bidder in a mining lease auction?", 
+                    "Explain the process of granting a Composite Licence.", 
+                    "What are the eligibility criteria for an applicant to be eligible for a Composite License with respect to an area within the State?",
+                    "What are the minimum and maximum area requirements for a Composite License grant?",
+                    "What are the indicative end uses for which the application can be submitted?",
+                    "What is the process for determining the technically qualified bidders in the first round of auction?",
+                    "How does the final price offer differ from the initial price offer in the second round of auction?",
+                    "What are the legal implications and risk factors associated with the grant of a Composite License?"]
     const Evidence_rules_question_list = ["What are the Minerals (Evidence of Mineral Contents) Rules 2015?",  "To which minerals do these rules apply?", "What are the different stages of mineral exploration defined in the rules?", "Explain reporting Mineral Resources.",]
     const NGDR_question_list = ["Create a kriging map for copper for the toposheet number 55K14", "Create a IDW map for al2o3 for the toposheet number 55P10","Tell me the maximum value for cu in the toposheet number 55K14", "what is the max and min values for the concentrations of hg in toposheet number 55P02?"]
     if (!enable_input){
@@ -81,8 +93,8 @@
       messageContainer.classList.add('message-container');
       messageContainer.appendChild(profilePhoto);
       messageContainer.appendChild(messageElement);
-      
-      chatBox.insertBefore(messageContainer, userMessageContainer);
+      // instead of inserting before the initial greet container, insert after the last message container
+      chatBox.insertBefore(messageContainer, bottomOfChatbox);
       chatBox.scrollTop = chatBox.scrollHeight;
     }
     
@@ -99,6 +111,7 @@
     form.addEventListener('submit', (event) => {
       event.preventDefault();
       const userQuery = document.querySelector('input[name="query"]').value;
+      
       appendMessage(userQuery, true);
       document.querySelector('input[name="query"]').value = '';
       // add if else statement to make request to specific end point, ngdr or rag
@@ -125,24 +138,24 @@
             getMap(data)
           }*/
 
-          if (data[1] === 'kriging_map'){ // check if the response is a krigging map
+          if (data[1] === 'kriging_map' || data[1] === 'idw_map'){ // check if the response is a krigging map
             // change the logic handle here to display the map
             map_data = data[0][0]
             getMap(map_data)
             // getMap(data)
           }
-          else if (data[1] === 'idw_map'){ //if it  contains base64 image for IDW map
-            //create dynmic image element that contains base64 image 
-            console.log("image string", data[0]['image_data'])
-            const imageElement = document.createElement('img');
-            imageElement.src = `data:image/png;base64,${data[0]['image_data']}`;
-            imageElement.classList.add('dynamic-map-container');
-            imageElement.classList.add('bot-message');
-            imageElement.style="border-top: 0px;";
-            appendMessage(imageElement, false, isMap=true, isImage=true)
-            chatBox.scrollTop = chatBox.scrollHeight;
-            plotId += 1;
-          }
+          // else if (data[1] === 'idw_map'){ //if it  contains base64 image for IDW map
+          //   //create dynmic image element that contains base64 image 
+          //   console.log("image string", data[0]['image_data'])
+          //   const imageElement = document.createElement('img');
+          //   imageElement.src = `data:image/png;base64,${data[0]['image_data']}`;
+          //   imageElement.classList.add('dynamic-map-container');
+          //   imageElement.classList.add('bot-message');
+          //   imageElement.style="border-top: 0px;";
+          //   appendMessage(imageElement, false, isMap=true, isImage=true)
+          //   chatBox.scrollTop = chatBox.scrollHeight;
+          //   plotId += 1;
+          // }
 
           else if (data[1] === 'text'){ // if the response is not string from NGDR chatbot
               message = data[0] 
@@ -183,6 +196,8 @@
         })
         .catch((error) => {
           console.error('Error:', error);
+          appendMessage("📶 Looks like something went wrong. please try again later.")
+          chatBox.removeChild(loadingMessage)
         });
       }
     });
