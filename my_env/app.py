@@ -4,7 +4,8 @@ import requests
 from dotenv import load_dotenv
 import os
 import re
-from my_env.geo_chem import generate_geochemistry_response
+# from my_env.geo_chem import generate_geochemistry_response
+from geo_chem import generate_geochemistry_response
 import numpy as np
 
 
